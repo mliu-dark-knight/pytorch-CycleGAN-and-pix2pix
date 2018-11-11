@@ -3,6 +3,7 @@ import itertools
 from util.image_pool import ImagePool
 from .base_model import BaseModel
 from . import networks
+from . import context_nn, cpg
 
 
 class CycleGANModel(BaseModel):
@@ -18,6 +19,9 @@ class CycleGANModel(BaseModel):
             parser.add_argument('--lambda_B', type=float, default=10.0,
                                 help='weight for cycle loss (B -> A -> B)')
             parser.add_argument('--lambda_identity', type=float, default=0.5, help='use identity mapping. Setting lambda_identity other than 0 has an effect of scaling the weight of the identity mapping loss. For example, if the weight of the identity loss should be 10 times smaller than the weight of the reconstruction loss, please set lambda_identity = 0.1')
+            parser.add_argument('--context_size', type=int)
+            parser.add_argument('--contexts', type=int)
+            parser.add_argument('--rank', type=int)
 
         return parser
 
@@ -40,6 +44,9 @@ class CycleGANModel(BaseModel):
         else:  # during test time, only load Gs
             self.model_names = ['G_A', 'G_B']
 
+        context_nn.Conv2d.context_size = opt.context_size
+        context_nn.Conv2d.rank = opt.rank
+
         # load/define networks
         # The naming conversion is different from those used in the paper
         # Code (paper): G_A (G), G_B (F), D_A (D_Y), D_B (D_X)
@@ -47,6 +54,7 @@ class CycleGANModel(BaseModel):
                                         not opt.no_dropout, opt.init_type, opt.init_gain, self.gpu_ids)
         self.netG_B = networks.define_G(opt.output_nc, opt.input_nc, opt.ngf, opt.netG, opt.norm,
                                         not opt.no_dropout, opt.init_type, opt.init_gain, self.gpu_ids)
+        self.context = cpg.Context(opt.contexts, opt.context_size)
 
         if self.isTrain:
             use_sigmoid = opt.no_lsgan
@@ -63,7 +71,7 @@ class CycleGANModel(BaseModel):
             self.criterionCycle = torch.nn.L1Loss()
             self.criterionIdt = torch.nn.L1Loss()
             # initialize optimizers
-            self.optimizer_G = torch.optim.Adam(itertools.chain(self.netG_A.parameters(), self.netG_B.parameters()),
+            self.optimizer_G = torch.optim.Adam(itertools.chain(self.context.parameters(), self.netG_A.parameters(), self.netG_B.parameters()),
                                                 lr=opt.lr, betas=(opt.beta1, 0.999))
             self.optimizer_D = torch.optim.Adam(itertools.chain(self.netD_A.parameters(), self.netD_B.parameters()),
                                                 lr=opt.lr, betas=(opt.beta1, 0.999))
@@ -78,11 +86,13 @@ class CycleGANModel(BaseModel):
         self.image_paths = input['A_paths' if AtoB else 'B_paths']
 
     def forward(self):
-        self.fake_B = self.netG_A(self.real_A)
-        self.rec_A = self.netG_B(self.fake_B)
+        context_vec = self.context(torch.LongTensor([0]))
 
-        self.fake_A = self.netG_B(self.real_B)
-        self.rec_B = self.netG_A(self.fake_A)
+        self.fake_B = self.netG_A(context_vec, self.real_A)
+        self.rec_A = self.netG_B(context_vec, self.fake_B)
+
+        self.fake_A = self.netG_B(context_vec, self.real_B)
+        self.rec_B = self.netG_A(context_vec, self.fake_A)
 
     def backward_D_basic(self, netD, real, fake):
         # Real
