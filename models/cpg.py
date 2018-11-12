@@ -32,8 +32,6 @@ class Context(nn.Module):
         self.context_embedding = nn.Embedding(contexts, context_size, 
                                               max_norm=1.0, norm_type=2)
         self.context_size = context_size
-        for param in self.parameters():
-            nn.init.normal_(param.data, std=0.1)
 
     def forward(self, context):
         return self.context_embedding(context)
