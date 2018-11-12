@@ -91,8 +91,8 @@ class CycleGANModel(BaseModel):
 
     def forward(self):
         #self.context_vec = self.netContext(torch.LongTensor([0]))
-        self.context_A = self.netContext(torch.LongTensor([0]))
-        self.context_B = self.netContext(torch.LongTensor([1]))
+        self.context_A = self.netContext(torch.LongTensor([0]).to(self.device))
+        self.context_B = self.netContext(torch.LongTensor([1]).to(self.device))
 
         self.fake_B = self.netG_A(self.context_A, self.real_A)
         self.rec_A = self.netG_B(self.context_B, self.fake_B)
