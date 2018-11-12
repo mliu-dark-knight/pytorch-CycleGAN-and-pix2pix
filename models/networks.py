@@ -141,7 +141,7 @@ class GANLoss(nn.Module):
 # downsampling/upsampling operations.
 # Code and idea originally from Justin Johnson's architecture.
 # https://github.com/jcjohnson/fast-neural-style/
-class ResnetGenerator(context_nn.ContextLayer):
+class ResnetGenerator(context_nn.ContextModule):
     def __init__(self, input_nc, output_nc, ngf=64, norm_layer=nn.BatchNorm2d, use_dropout=False, n_blocks=6, padding_type='reflect'):
         assert(n_blocks >= 0)
         super(ResnetGenerator, self).__init__()
@@ -173,7 +173,7 @@ class ResnetGenerator(context_nn.ContextLayer):
 
         for i in range(n_downsampling):
             mult = 2**(n_downsampling - i)
-            model += [nn.ConvTranspose2d(ngf * mult, int(ngf * mult / 2),
+            model += [context_nn.ConvTranspose2d(ngf * mult, int(ngf * mult / 2),
                                          kernel_size=3, stride=2,
                                          padding=1, output_padding=1,
                                          bias=use_bias),
@@ -183,14 +183,14 @@ class ResnetGenerator(context_nn.ContextLayer):
         model += [context_nn.Conv2d(ngf, output_nc, kernel_size=7, padding=0)]
         model += [nn.Tanh()]
 
-        self.model = nn.ModuleList(model)
+        self.model = context_nn.ContextSequential(*model)
 
     def forward(self, context, input):
-        return context_nn.ContextLayer.forward_list(self.model, context, input)
+        return self.model(context, input)
 
 
 # Define a resnet block
-class ResnetBlock(nn.Module):
+class ResnetBlock(context_nn.ContextModule):
     def __init__(self, dim, padding_type, norm_layer, use_dropout, use_bias):
         super(ResnetBlock, self).__init__()
         self.conv_block = self.build_conv_block(dim, padding_type, norm_layer, use_dropout, use_bias)
@@ -207,7 +207,7 @@ class ResnetBlock(nn.Module):
         else:
             raise NotImplementedError('padding [%s] is not implemented' % padding_type)
 
-        conv_block += [nn.Conv2d(dim, dim, kernel_size=3, padding=p, bias=use_bias),
+        conv_block += [context_nn.Conv2d(dim, dim, kernel_size=3, padding=p, bias=use_bias),
                        norm_layer(dim),
                        nn.ReLU(True)]
         if use_dropout:
@@ -222,13 +222,13 @@ class ResnetBlock(nn.Module):
             p = 1
         else:
             raise NotImplementedError('padding [%s] is not implemented' % padding_type)
-        conv_block += [nn.Conv2d(dim, dim, kernel_size=3, padding=p, bias=use_bias),
+        conv_block += [context_nn.Conv2d(dim, dim, kernel_size=3, padding=p, bias=use_bias),
                        norm_layer(dim)]
 
-        return nn.Sequential(*conv_block)
+        return context_nn.ContextSequential(*conv_block)
 
-    def forward(self, x):
-        out = x + self.conv_block(x)
+    def forward(self, ctx, x):
+        out = x + self.conv_block(ctx, x)
         return out
 
 
