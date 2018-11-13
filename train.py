@@ -1,15 +1,27 @@
+import os
 import time
-from options.train_options import TrainOptions
+from collections import OrderedDict
+from copy import deepcopy
+
 from data import CreateDataLoader
 from models import create_model
+from options.train_options import TrainOptions
 from util.visualizer import Visualizer
 
 if __name__ == '__main__':
     opt = TrainOptions().parse()
-    data_loader = CreateDataLoader(opt)
-    dataset = data_loader.load_data()
-    dataset_size = len(data_loader)
-    print('#training images = %d' % dataset_size)
+    data_loaders = OrderedDict()
+    datasets = OrderedDict()
+    dataset_sizes = OrderedDict()
+    opt_copy = deepcopy(opt)
+    for task in opt.tasks:
+        opt_copy.dataroot = os.path.join(opt.dataroot, task)
+        data_loader = CreateDataLoader(opt_copy)
+        dataset = data_loader.load_data()
+        dataset_size = len(dataset)
+        data_loaders[task] = data_loaders
+        datasets[task] = dataset
+        dataset_sizes[task] = dataset_size
 
     model = create_model(opt)
     model.setup(opt)
@@ -31,7 +43,7 @@ if __name__ == '__main__':
             visualizer.reset()
             total_steps += opt.batch_size
             epoch_iter += opt.batch_size
-            model.set_input(data)
+            model.set_input(data, task)
             model.optimize_parameters()
 
             if total_steps % opt.display_freq == 0:

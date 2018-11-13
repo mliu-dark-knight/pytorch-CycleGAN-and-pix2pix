@@ -1,9 +1,12 @@
-import torch
 import itertools
+from collections import OrderedDict
+
+import torch
+
 from util.image_pool import ImagePool
-from .base_model import BaseModel
-from . import networks
 from . import context_nn, cpg
+from . import networks
+from .base_model import BaseModel
 
 
 class CycleGANModel(BaseModel):
@@ -19,9 +22,8 @@ class CycleGANModel(BaseModel):
             parser.add_argument('--lambda_B', type=float, default=10.0,
                                 help='weight for cycle loss (B -> A -> B)')
             parser.add_argument('--lambda_identity', type=float, default=0.5, help='use identity mapping. Setting lambda_identity other than 0 has an effect of scaling the weight of the identity mapping loss. For example, if the weight of the identity loss should be 10 times smaller than the weight of the reconstruction loss, please set lambda_identity = 0.1')
-            parser.add_argument('--context_size', type=int)
-            parser.add_argument('--contexts', type=int)
-            parser.add_argument('--rank', type=int)
+            parser.add_argument('--context_size', type=int, default=8, help='dimension of task embedding')
+            parser.add_argument('--rank', type=int, default=4)
 
         return parser
 
@@ -40,9 +42,9 @@ class CycleGANModel(BaseModel):
         self.visual_names = visual_names_A + visual_names_B
         # specify the models you want to save to the disk. The program will call base_model.save_networks and base_model.load_networks
         if self.isTrain:
-            self.model_names = ['G_A', 'D_A', 'D_B', 'Context']
+            self.model_names = ['G_A', 'D_A', 'D_B', 'Contexts']
         else:  # during test time, only load Gs
-            self.model_names = ['G_A', 'Context']
+            self.model_names = ['G_A', 'Contexts']
 
         context_nn.Conv2d.context_size = opt.context_size
         context_nn.Conv2d.rank = opt.rank
@@ -52,13 +54,12 @@ class CycleGANModel(BaseModel):
         # load/define networks
         # The naming conversion is different from those used in the paper
         # Code (paper): G_A (G), G_B (F), D_A (D_Y), D_B (D_X)
-        self.netG_A = networks.define_G(opt.input_nc, opt.output_nc, opt.ngf, opt.netG, opt.norm,
-                                        not opt.no_dropout, opt.init_type, opt.init_gain, self.gpu_ids)
-        self.netG_B = self.netG_A
-        #self.netG_B = networks.define_G(opt.output_nc, opt.input_nc, opt.ngf, opt.netG, opt.norm,
-        #                                not opt.no_dropout, opt.init_type, opt.init_gain, self.gpu_ids)
-        netContext = cpg.Context(opt.contexts, opt.context_size)
-        self.netContext = networks.init_net(netContext, init_type='normal', init_gain=0.1, gpu_ids=self.gpu_ids)
+        netG = networks.define_G(opt.input_nc, opt.output_nc, opt.ngf, opt.netG, opt.norm, not opt.no_dropout, opt.init_type, opt.init_gain, self.gpu_ids)
+        self.netG_A, self.netG_B = netG, netG
+
+        netContexts = cpg.Context(2 * len(opt.tasks), opt.context_size)
+        self.netContexts = networks.init_net(netContexts, init_type='normal', init_gain=0.1, gpu_ids=self.gpu_ids)
+        self.task2context = OrderedDict({task: (2 * task_id, 2 * task_id + 1) for task_id, task in enumerate(opt.tasks)})
 
         if self.isTrain:
             use_sigmoid = opt.no_lsgan
@@ -75,7 +76,7 @@ class CycleGANModel(BaseModel):
             self.criterionCycle = torch.nn.L1Loss()
             self.criterionIdt = torch.nn.L1Loss()
             # initialize optimizers
-            self.optimizer_G = torch.optim.Adam(itertools.chain(self.netContext.parameters(), self.netG_A.parameters()),
+            self.optimizer_G = torch.optim.Adam(itertools.chain(self.netContexts.parameters(), self.netG_A.parameters()),
                                                 lr=opt.lr, betas=(opt.beta1, 0.999))
             self.optimizer_D = torch.optim.Adam(itertools.chain(self.netD_A.parameters(), self.netD_B.parameters()),
                                                 lr=opt.lr, betas=(opt.beta1, 0.999))
@@ -83,7 +84,8 @@ class CycleGANModel(BaseModel):
             self.optimizers.append(self.optimizer_G)
             self.optimizers.append(self.optimizer_D)
 
-    def set_input(self, input):
+    def set_input(self, input, task):
+        self.task = task
         AtoB = self.opt.direction == 'AtoB'
         self.real_A = input['A' if AtoB else 'B'].to(self.device)
         self.real_B = input['B' if AtoB else 'A'].to(self.device)
@@ -91,8 +93,8 @@ class CycleGANModel(BaseModel):
 
     def forward(self):
         #self.context_vec = self.netContext(torch.LongTensor([0]))
-        self.context_A = self.netContext(torch.LongTensor([0]).to(self.device))
-        self.context_B = self.netContext(torch.LongTensor([1]).to(self.device))
+        self.context_A = self.netContexts(torch.LongTensor([self.task2context[self.task][0]]).to(self.device))
+        self.context_B = self.netContexts(torch.LongTensor([self.task2context[self.task][1]]).to(self.device))
 
         self.fake_B = self.netG_A(self.context_A, self.real_A)
         self.rec_A = self.netG_B(self.context_B, self.fake_B)

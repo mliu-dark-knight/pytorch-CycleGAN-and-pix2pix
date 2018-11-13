@@ -1,6 +1,8 @@
 import os
-import torch
 from collections import OrderedDict
+
+import torch
+
 from . import networks
 
 
@@ -28,7 +30,7 @@ class BaseModel():
         self.visual_names = []
         self.image_paths = []
 
-    def set_input(self, input):
+    def set_input(self, input, task):
         self.input = input
 
     def forward(self):
