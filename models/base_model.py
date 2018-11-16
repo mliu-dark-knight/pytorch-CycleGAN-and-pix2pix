@@ -2,11 +2,11 @@ import os
 from collections import OrderedDict
 
 import torch
-
+import torch.nn as nn
 from . import networks
 
 
-class BaseModel():
+class BaseModel(nn.Module):
 
     # modify parser to add command line options,
     # and also change the default values if needed
