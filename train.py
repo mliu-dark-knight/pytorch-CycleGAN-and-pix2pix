@@ -16,6 +16,7 @@ if __name__ == '__main__':
     datasets = OrderedDict()
     opt_copy = deepcopy(opt)
     for task in opt.tasks:
+        opt_copy.task = task
         opt_copy.dataroot = os.path.join(opt.dataroot, task)
         data_loader = CreateDataLoader(opt_copy)
         dataset = data_loader.load_data()

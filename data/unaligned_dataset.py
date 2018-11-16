@@ -29,7 +29,7 @@ class UnalignedDataset(BaseDataset):
 
     def __getitem__(self, index):
         A_path = self.A_paths[index % self.A_size]
-        if self.opt.serial_batches:
+        if self.opt.serial_batches[self.opt.task]:
             index_B = index % self.B_size
         else:
             index_B = random.randint(0, self.B_size - 1)
