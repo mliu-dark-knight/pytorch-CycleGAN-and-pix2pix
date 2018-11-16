@@ -57,6 +57,8 @@ class Visualizer():
             self.img_dir = os.path.join(self.web_dir, 'images')
             print('create web directory %s...' % self.web_dir)
             util.mkdirs([self.web_dir, self.img_dir])
+            for task in self.opt.tasks:
+                util.mkdir(os.path.join(self.img_dir, task))
         self.log_name = os.path.join(opt.checkpoints_dir, opt.name, 'loss_log.txt')
         with open(self.log_name, "a") as log_file:
             now = time.strftime("%c")
@@ -70,7 +72,7 @@ class Visualizer():
         exit(1)
 
     # |visuals|: dictionary of images to display or save
-    def display_current_results(self, visuals, epoch, save_result):
+    def display_current_results(self, visuals, epoch, save_result, task):
         if self.display_id > 0:  # show images in the browser
             ncols = self.ncols
             if ncols > 0:
@@ -122,7 +124,7 @@ class Visualizer():
             self.saved = True
             for label, image in visuals.items():
                 image_numpy = util.tensor2im(image)
-                img_path = os.path.join(self.img_dir, 'epoch%.3d_%s.png' % (epoch, label))
+                img_path = os.path.join(self.img_dir, task, 'epoch%.3d_%s.png' % (epoch, label))
                 util.save_image(image_numpy, img_path)
             # update website
             webpage = html.HTML(self.web_dir, 'Experiment name = %s' % self.name, reflesh=1)
@@ -159,8 +161,8 @@ class Visualizer():
             self.throw_visdom_connection_error()
 
     # losses: same format as |losses| of plot_current_losses
-    def print_current_losses(self, epoch, i, losses, t, t_data):
-        message = '(epoch: %d, iters: %d, time: %.3f, data: %.3f) ' % (epoch, i, t, t_data)
+    def print_current_losses(self, epoch, i, losses, t, task, t_data):
+        message = '(epoch: %d, iters: %d, time: %.3f, task: %s, data: %.3f) ' % (epoch, i, t, task, t_data)
         for k, v in losses.items():
             message += '%s: %.3f ' % (k, v)
 

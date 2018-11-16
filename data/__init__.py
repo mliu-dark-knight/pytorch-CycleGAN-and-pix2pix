@@ -1,5 +1,7 @@
 import importlib
+
 import torch.utils.data
+
 from data.base_data_loader import BaseDataLoader
 from data.base_dataset import BaseDataset
 
@@ -59,7 +61,7 @@ class CustomDatasetDataLoader(BaseDataLoader):
         self.dataloader = torch.utils.data.DataLoader(
             self.dataset,
             batch_size=opt.batch_size,
-            shuffle=not opt.serial_batches,
+            shuffle=not opt.serial_batches[opt.task],
             num_workers=int(opt.num_threads))
 
     def load_data(self):
