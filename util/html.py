@@ -4,7 +4,7 @@ import os
 
 
 class HTML:
-    def __init__(self, web_dir, title, reflesh=0):
+    def __init__(self, web_dir, title, filename='index.html', reflesh=0):
         self.title = title
         self.web_dir = web_dir
         self.img_dir = os.path.join(self.web_dir, 'images')
@@ -14,6 +14,7 @@ class HTML:
             os.makedirs(self.img_dir)
         # print(self.img_dir)
 
+        self.filename = filename
         self.doc = dominate.document(title=title)
         if reflesh > 0:
             with self.doc.head:
@@ -43,7 +44,7 @@ class HTML:
                             p(txt)
 
     def save(self):
-        html_file = '%s/index.html' % self.web_dir
+        html_file = '%s/%s' % (self.web_dir, self.filename)
         f = open(html_file, 'wt')
         f.write(self.doc.render())
         f.close()

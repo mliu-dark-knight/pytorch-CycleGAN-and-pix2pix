@@ -16,8 +16,14 @@ else:
 # save image to the disk
 def save_images(webpage, visuals, image_path, aspect_ratio=1.0, width=256):
     image_dir = webpage.get_image_dir()
-    short_path = ntpath.basename(image_path[0])
-    name = os.path.splitext(short_path)[0]
+    # facades/testA/xxxx.jpg
+    paths = []
+    s = image_path[0]
+    for t in range(3):
+        paths.append(ntpath.basename(s))
+        s = ntpath.dirname(s)
+    paths[0] = os.path.splitext(paths[0])[0]
+    name = '_'.join(list(reversed(paths)))
 
     webpage.add_header(name)
     ims, txts, links = [], [], []

@@ -23,8 +23,9 @@ class CycleGANModel(BaseModel):
                                 help='weight for cycle loss (B -> A -> B)')
             parser.add_argument('--lambda_identities', type=dict, default={True: 0.5, False: 0.0},
                                 help='use identity mapping. Setting lambda_identity other than 0 has an effect of scaling the weight of the identity mapping loss. For example, if the weight of the identity loss should be 10 times smaller than the weight of the reconstruction loss, please set lambda_identity = 0.1')
-            parser.add_argument('--context_size', type=int, default=8, help='dimension of task embedding')
-            parser.add_argument('--rank', type=int, default=4)
+        # Context Related Parameters
+        parser.add_argument('--context_size', type=int, default=8, help='dimension of task embedding')
+        parser.add_argument('--rank', type=int, default=4)
 
         return parser
 
