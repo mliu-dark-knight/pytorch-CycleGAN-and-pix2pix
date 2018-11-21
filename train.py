@@ -25,6 +25,8 @@ if __name__ == '__main__':
 
     for k, dataset in datasets.items():
         print(k, len(dataset))
+    dataset_size = sum([len(dataset) for dataset in datasets.values()])
+
 
     model = nn.DataParallel(create_model(opt))
     model.module.setup(opt)
