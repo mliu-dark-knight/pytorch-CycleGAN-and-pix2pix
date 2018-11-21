@@ -21,7 +21,7 @@ class CycleGANModel(BaseModel):
             parser.add_argument('--lambda_A', type=float, default=10.0, help='weight for cycle loss (A -> B -> A)')
             parser.add_argument('--lambda_B', type=float, default=10.0,
                                 help='weight for cycle loss (B -> A -> B)')
-            parser.add_argument('--lambda_identities', type=dict, default={True: 0.5, False: 0.0},
+            parser.add_argument('--lambda_identities', type=float, default=0.5,
                                 help='use identity mapping. Setting lambda_identity other than 0 has an effect of scaling the weight of the identity mapping loss. For example, if the weight of the identity loss should be 10 times smaller than the weight of the reconstruction loss, please set lambda_identity = 0.1')
         # Context Related Parameters
         parser.add_argument('--context_size', type=int, default=8, help='dimension of task embedding')
@@ -31,6 +31,8 @@ class CycleGANModel(BaseModel):
 
     def initialize(self, opt):
         BaseModel.initialize(self, opt)
+
+        opt.lambda_identities = {task : opt.lambda_identities for task in opt.tasks}
 
         # specify the training losses you want to print out. The program will call base_model.get_current_losses
         self.loss_names = ['D_A', 'G_A', 'cycle_A', 'idt_A', 'D_B', 'G_B', 'cycle_B', 'idt_B']
@@ -129,7 +131,7 @@ class CycleGANModel(BaseModel):
         loss_D.backward()
 
     def backward_G(self):
-        lambda_idt = self.opt.lambda_identities[self.opt.serial_batches[self.task]]
+        lambda_idt = self.opt.lambda_identities[self.task]
         lambda_A = self.opt.lambda_A
         lambda_B = self.opt.lambda_B
         # Identity loss
@@ -141,6 +143,8 @@ class CycleGANModel(BaseModel):
             self.idt_B = self.netG_B(self.genContext_B, self.real_A)
             self.loss_idt_B = self.criterionIdt(self.idt_B, self.real_A) * lambda_A * lambda_idt
         else:
+            self.idt_A = torch.zeros([self.real_A.shape[0], 3, 256, 256])
+            self.idt_B = torch.zeros([self.real_B.shape[0], 3, 256, 256])
             self.loss_idt_A = 0
             self.loss_idt_B = 0
 

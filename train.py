@@ -20,11 +20,11 @@ if __name__ == '__main__':
         opt_copy.dataroot = os.path.join(opt.dataroot, task)
         data_loader = CreateDataLoader(opt_copy)
         dataset = data_loader.load_data()
-        dataset_size = len(dataset)
         data_loaders[task] = data_loaders
         datasets[task] = dataset
 
-    dataset_size = sum([len(dataset) for dataset in datasets.values()])
+    for k, dataset in datasets.items():
+        print(k, len(dataset))
 
     model = nn.DataParallel(create_model(opt))
     model.module.setup(opt)
