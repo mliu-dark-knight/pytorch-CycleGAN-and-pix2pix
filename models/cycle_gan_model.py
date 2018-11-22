@@ -32,7 +32,8 @@ class CycleGANModel(BaseModel):
     def initialize(self, opt):
         BaseModel.initialize(self, opt)
 
-        opt.lambda_identities = {task : opt.lambda_identities for task in opt.tasks}
+        if self.isTrain:
+            opt.lambda_identities = {task : opt.lambda_identities for task in opt.tasks}
 
         # specify the training losses you want to print out. The program will call base_model.get_current_losses
         self.loss_names = ['D_A', 'G_A', 'cycle_A', 'idt_A', 'D_B', 'G_B', 'cycle_B', 'idt_B']
