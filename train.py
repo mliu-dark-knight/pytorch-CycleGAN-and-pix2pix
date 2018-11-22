@@ -33,8 +33,8 @@ if __name__ == '__main__':
     visualizer = Visualizer(opt)
     total_steps = 0
 
-    print('Save initialzed models')
-    model.module.save_networks('latest')
+    # print('Save initialzed models')
+    # model.module.save_networks('latest')
 
     for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
         epoch_start_time = time.time()
