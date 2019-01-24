@@ -5,11 +5,11 @@
 # directory as well as the subdirectories
 ###############################################################################
 
-import torch.utils.data as data
-
-from PIL import Image
 import os
+
 import os.path
+import torch.utils.data as data
+from PIL import Image
 
 IMG_EXTENSIONS = [
     '.jpg', '.JPG', '.jpeg', '.JPEG',
